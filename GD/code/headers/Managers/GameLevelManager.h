@@ -74,4 +74,12 @@ class GameLevelManager : public cocos2d::CCNode
 	DWORD unk;
 	std::string m_sUnkString;
 	cocos2d::CCObject* m_pReportedLevel;
+	cocos2d::CCDictionary* m_pLevels;
+	int m_nCurrentLevel;
+
+	const char* getTimeLeft(GameLevelManager* this, const char* key, float defaultValue);
+	float getFloatValue(GameLevelManager* this, const char* key, float defaultValue);
+	float getTotalTimePlayed(GameLevelManager* this);
+	const char* getValue(GameLevelManager* this, const char* key);
+	cocos2d::CCDictionary* getLevelData(GameLevelManager* this);
 };

@@ -33,6 +33,7 @@
 #include "PlayerObject.h"
 #include "GhostTrailEffect.h"
 #include "UndoObject.h"
+#include "GameObjectCopy.h"
 #include "GJSearchObject.h"
 #include "AchievementBar.h"
 #include "AchievementNotifier.h"

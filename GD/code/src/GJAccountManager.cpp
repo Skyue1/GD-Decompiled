@@ -82,30 +82,51 @@ void GJAccountManager::dataLoaded(DS_Dictionary *_dict)
     m_nPlayerAccountID = _dict->getIntegerForKey("GJA_003");
 }
 
-void GJAccountManager::firstSetup() {}
+void GJAccountManager::firstSetup() {
+	// initialize m_pDLObject
+	m_pDLObject = cocos2d::CCDictionary::create();
+	m_pDLObject->retain();
+
+	// set default player values
+	setPlayerName("Player");
+	setPlayerPassword("123456");
+	setPlayerAccountID(0);
+}
 
 void GJAccountManager::onLoginAccountCompleted(std::string _response, std::string _tag)
 {
-    removeDLFromActive(_tag.c_str());
-    if (stoi(_response) == AccountError::kAccountErrorAccountDisabled || stoi(_response) == AccountError::kAccountErrorLinkedToDifferentSteamAccount || stoi(_response) == AccountError::kAccountErrorGeneric)
-    {
-    errorLabel:
-        if (!m_pLoginAccountDelegate)
-            return;
-        return m_pLoginAccountDelegate->loginAccountFailed(static_cast<AccountError>(std::stoi(_response)));
-    }
-    cocos2d::CCArray *resArr = RobTop::splitToCCArray(_response, ",");
-    if (resArr->count() <= 2)
-        goto errorLabel;
+	removeDLFromActive(tag.c_str());
+	int errorCode = std::stoi(response);
+	if (errorCode == AccountError::kAccountErrorAccountDisabled || errorCode == AccountError::kAccountErrorLinkedToDifferentSteamAccount || errorCode == AccountError::kAccountErrorGeneric)
+	{
+		if (!m_pLoginAccountDelegate)
+				return;
+		m_pLoginAccountDelegate->loginAccountFailed(static_cast<AccountError>(errorCode));
+		return;
+	}
 
-    int accountID = resArr->stringAtIndex(0)->intValue();
-    int playerID = resArr->stringAtIndex(1)->intValue();
+	cocos2d::CCArray* resArr = RobTop::splitToCCArray(response, ",");
+	if (resArr->count() <= 2)
+	{
+		 if (!m_pLoginAccountDelegate)
+        return;
+    m_pLoginAccountDelegate->loginAccountFailed(static_cast<AccountError>(errorCode));
+    return;
+	}
 
-    if (accountID <= 0 || playerID <= 0)
-        goto errorLabel;
+	int accountID = resArr->stringAtIndex(0)->intValue();
+	int playerID = resArr->stringAtIndex(1)->intValue();
 
-    if (m_pLoginAccountDelegate)
-        m_pLoginAccountDelegate->loginAccountFinished(accountID, playerID);
+	if (accountID <= 0 || playerID <= 0)
+	{
+		if (!m_pLoginAccountDelegate)
+			return;
+		m_pLoginAccountDelegate->loginAccountFailed(static_cast<AccountError>(errorCode));
+		return;
+	}
+
+	if (m_pLoginAccountDelegate)
+		  m_pLoginAccountDelegate->loginAccountFinished(accountID, playerID);
 }
 
 void GJAccountManager::onRegisterAccountCompleted(std::string _response, std::string _tag)
@@ -171,27 +192,21 @@ void GJAccountManager::onUpdateAccountSettingsCompleted(std::string _response, s
 void GJAccountManager::onGetAccountSyncURLCompleted(std::string _response, std::string _tag) 
 {
     removeDLFromActive(_tag.c_str());
-    if (stoi(_response) != -1)
-    {
-        std::string endpoint = cocos2d::CCString::createWithFormat("%s/database/accounts/syncGJAccountNew.php", _response)->m_sString;
-        bool synced = syncAccount(endpoint);
-        if (!synced)
-        {
-            if (!m_pSyncAccountDelegate)
-                return;
-            return m_pSyncAccountDelegate->syncAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
-        }
-    }
-    else
-    {
-        if (!m_pBackupAccountDelegate)
-            return;
-        return m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
-        //this is a bug that RobTop left in, bugfixed version can be found in the comment below 
-        //  if (!m_pSyncAccountDelegate)
-        //      return;
-        //  return m_pSyncAccountDelegate->syncAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
-    }
+
+		if (std::stoi(_response) != 1)
+		{
+			std::string endpoint = cocos2d::CCString::createWithFormat("%s/database/accounts/backupGJAccountNew.php", _response)->m_sString;
+			bool synced = syncAccount(endpoint);
+
+			if (!synced && m_pSyncAccountDelegate)
+			{
+				m_pSyncAccountDelegate->syncAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
+			}
+		}
+		else if (m_pBackupAccountDelegate)
+		{
+			m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
+		}
 }
 
 void GJAccountManager::onGetAccountBackupURLCompleted(std::string _response, std::string _tag)
@@ -200,25 +215,18 @@ void GJAccountManager::onGetAccountBackupURLCompleted(std::string _response, std
     if (stoi(_response) != -1)
     {
         std::string endpoint = cocos2d::CCString::createWithFormat("%s/database/accounts/backupGJAccountNew.php", _response)->m_sString;
-        bool backedUp = backupAccount(endpoint);
-        if (!backedUp)
+        if (!backupAccount(endpoint))
         {
-        error_label:
-            if (!m_pBackupAccountDelegate)
-                return;
-            return m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
+            if (m_pBackupAccountDelegate)
+                m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
+            return;
         }
     }
-    else
-        goto error_label;
-}
-
-void GJAccountManager::handleIt(bool _requestSentSuccessfully, std::string _response, std::string _tag, GJHttpType _httpType)
-{
-    std::string serverResponse = _response;
-    if (!_requestSentSuccessfully)
-        serverResponse = "-1";
-
+    else if (m_pBackupAccountDelegate)
+    {
+        m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
+        return;
+    }
     switch (_httpType)
     {
     case GJHttpType::kGJHttpTypeLoginAccount:
@@ -352,5 +360,5 @@ void GJAccountManager::onSyncAccountCompleted(std::string _response, std::string
         m_pAccountDelegate->accountStatusChanged();
 
     if (m_pSyncAccountDelegate)
-        m_pSyncAccountDelegate->syncAccountFailed(static_cast<BackupAccountError>(_response);
+        m_pSyncAccountDelegate->syncAccountFailed(static_cast<BackupAccountError>(_response));
 }

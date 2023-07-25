@@ -227,6 +227,12 @@ void GJAccountManager::onGetAccountBackupURLCompleted(std::string _response, std
         m_pBackupAccountDelegate->backupAccountFailed(BackupAccountError::kBackupAccountErrorGeneric);
         return;
     }
+}
+void GJAccountManager::handleIt(bool _requestSentSuccessfully, std::string _response, std::string _tag, GJHttpType _httpType)
+{
+    std::string serverResponse = _response;
+    if (!_requestSentSuccessfully)
+        serverResponse = "-1";
     switch (_httpType)
     {
     case GJHttpType::kGJHttpTypeLoginAccount:

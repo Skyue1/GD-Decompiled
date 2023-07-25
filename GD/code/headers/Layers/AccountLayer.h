@@ -21,4 +21,6 @@ public:
 	LoadingCircle* m_pLoadingCircle;
 	int m_nButtonID;
 	bool m_bLinked;
+
+	void onBackup(cocos2d::CCObject* obj);
 };

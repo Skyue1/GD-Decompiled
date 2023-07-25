@@ -6,4 +6,7 @@ class UndoObject : public cocos2d::CCObject
 	int m_eUndoCommand;
 	cocos2d::CCArray* m_pUndoArray;
 	bool m_bRedo;
+
+	int initWithTransformObjects(cocos2d::CCArray* transformObjects);
+	int createWithTransformObjects();
 };
